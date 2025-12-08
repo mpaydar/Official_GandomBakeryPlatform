@@ -1,7 +1,8 @@
 # Official_GandomBakeryPlatform
 
 ### Overall Timeline: December 2024 → May 31, 2025
-
+ 
+ ### On December 02- Contract was made between Mohammad Bayat and Gandom Bakery Owner, Reza Emami. 
 
 #### PHASE 1 — Requirements, System Architecture & Prototyping (Dec 2 – Dec 31)
 
