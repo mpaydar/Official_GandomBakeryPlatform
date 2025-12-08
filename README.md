@@ -9,7 +9,7 @@
  
  #### December 05: Wrote my initial intuition on how the real notification should look like. Thought about possible hardware integration such as simple weigh keep track the initial dough, weight of each bread which could help us to give rough estimate on how many breads can be made from that initial dough amount based on current bread weigh being baked. 
  
- #### I wrote my initial intuitions on how the system should look like. 
+ #### To summarize the week work, I wrote my initial intuitions on how the system should look like. I will refine these intuition and do deep research to confirm the validity of my intuition.
    
    Example: Sangak, Taftoon,and Lavash are the only items that needs real time notification for the owner. 
    
