@@ -2,7 +2,11 @@
 
 ### Overall Timeline: December 2024 → May 31, 2025
  
- ### On December 02- Contract was made between Mohammad Bayat and Gandom Bakery Owner, Reza Emami. 
+ #### On December 02- Contract was made between Mohammad Bayat and Gandom Bakery Owner, Reza Emami. 
+ #### December 03- 05, Meeting up with Gandom Bakery to know different constraint the system must have.
+   
+   Example: Sangak, Taftoon,and Lavash are the only items that needs real time notification for the owner. 
+   
 
 #### PHASE 1 — Requirements, System Architecture & Prototyping (Dec 2 – Dec 31)
 
