@@ -3,7 +3,7 @@
 ### Overall Timeline: December 2024 → May 31, 2025
 
 
-#### PHASE 1 — Requirements, System Architecture & Prototyping (Dec 10 – Dec 31)
+#### PHASE 1 — Requirements, System Architecture & Prototyping (Dec 2 – Dec 31)
 
 Deliverables
 
