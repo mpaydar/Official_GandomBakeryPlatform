@@ -1,20 +1,8 @@
 # Official_GandomBakeryPlatform
 
-### Overall Timeline: December 2024 → May 31, 2025
- 
- #### On December 02- Contract was made between Mohammad Bayat and Gandom Bakery Owner, Reza Emami. 
- #### December 03: Meet up with Gandom Bakery to know different constraint the system must have.
- 
- #### December 04: Wrote my initial intuition on how the db should look like and made a rough sketch of the db and draw how the schema should look like. 
- 
- #### December 05: Wrote my initial intuition on how the real notification should look like. Thought about possible hardware integration such as simple weigh keep track the initial dough, weight of each bread which could help us to give rough estimate on how many breads can be made from that initial dough amount based on current bread weigh being baked. 
- 
- #### To summarize the week work, I wrote my initial intuitions on how the system should look like. I will refine these intuition and do deep research to confirm the validity of my intuition.
-   
-   Example: Sangak, Taftoon,and Lavash are the only items that needs real time notification for the owner. 
-   
 
-#### PHASE 1 — Requirements, System Architecture & Prototyping (Dec 2 – Dec 31)
+
+#### PHASE 1 — Requirements, System Architecture & Prototyping 
 
 Deliverables
 
@@ -37,3 +25,38 @@ Deliverables
 • GitHub repo structure, CI skeleton, environment provisioning
 
 • Proof-of-concept for order creation → bakery confirmation flow
+
+### POS System Features:
+
+
+1. Cashier Screen UI
+2. Product Selection 
+3. Barcode Scanning
+4. Cart and Totals
+5. Payment Handling
+6. Receipt Generation
+7. Inventory updates
+
+### Product Selection:
+
+How items get into the sale without scanning.
+
+#### Touch-first behavior:
+
+Cashier taps category → taps product
+
+Modal opens (price, quantity, variants)
+
+Item is added to cart
+
+Used when:
+
+No barcode
+
+Produce priced by weight
+
+Custom items (bakery, deli)
+
+
+
+
