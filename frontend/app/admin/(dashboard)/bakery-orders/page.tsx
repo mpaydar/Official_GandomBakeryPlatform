@@ -8,7 +8,7 @@ export default function AdminBakeryOrdersPage() {
         Bakery orders
       </h1>
       <p className="mt-1 text-sm text-zinc-500">
-        New orders appear automatically with confirmation details — no refresh needed
+        Listen for the red alert bar and bell — new orders play a chime on any admin page
       </p>
       <div className="mt-8">
         <Suspense

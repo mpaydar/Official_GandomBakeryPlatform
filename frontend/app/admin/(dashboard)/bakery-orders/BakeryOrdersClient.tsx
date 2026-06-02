@@ -2,11 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useAdminOrderNotifications } from "@/components/admin/AdminOrderNotifications";
 import {
-  buildBakeryOrderAlerts,
   customerDisplayName,
   paymentDisplayLabel,
-  type BakeryOrderAlert,
   type BakeryOrderRow,
 } from "@/lib/bakery-order-alerts";
 
@@ -19,7 +18,6 @@ type OrderRow = BakeryOrderRow & {
   notes: string | null;
 };
 
-const POLL_MS = 5000;
 const HIGHLIGHT_MS = 12_000;
 
 const STATUSES = [
@@ -37,6 +35,7 @@ const FILTERS: { value: string; label: string }[] = [
 
 export default function BakeryOrdersClient() {
   const searchParams = useSearchParams();
+  const { ordersVersion } = useAdminOrderNotifications();
   const [statusFilter, setStatusFilter] = useState(
     () => searchParams.get("status") ?? ""
   );
@@ -49,7 +48,6 @@ export default function BakeryOrdersClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [alerts, setAlerts] = useState<BakeryOrderAlert[]>([]);
   const [highlightIds, setHighlightIds] = useState<Set<string>>(new Set());
 
   const ordersSnapshotRef = useRef<OrderRow[]>([]);
@@ -61,22 +59,13 @@ export default function BakeryOrdersClient() {
     return q.toString();
   }, [statusFilter]);
 
-  const pushNewOrders = useCallback((incoming: OrderRow[]) => {
+  const highlightIncoming = useCallback((incoming: OrderRow[]) => {
     if (incoming.length === 0) return;
-
-    const built = buildBakeryOrderAlerts(incoming);
-    setAlerts((prev) => {
-      const seen = new Set(prev.map((a) => a.id));
-      const fresh = built.filter((a) => !seen.has(a.id));
-      return [...fresh, ...prev].slice(0, 8);
-    });
-
     setHighlightIds((prev) => {
       const next = new Set(prev);
       for (const order of incoming) next.add(order.id);
       return next;
     });
-
     window.setTimeout(() => {
       setHighlightIds((prev) => {
         const next = new Set(prev);
@@ -89,9 +78,7 @@ export default function BakeryOrdersClient() {
   const load = useCallback(
     async (options?: { silent?: boolean }) => {
       const silent = options?.silent ?? false;
-      if (!silent) {
-        setLoading(true);
-      }
+      if (!silent) setLoading(true);
       setError(null);
       try {
         const res = await fetch(
@@ -111,7 +98,7 @@ export default function BakeryOrdersClient() {
           const incoming = next.filter(
             (order) => !prev.some((row) => row.id === order.id)
           );
-          pushNewOrders(incoming);
+          highlightIncoming(incoming);
         } else {
           hasHydratedRef.current = true;
         }
@@ -125,7 +112,7 @@ export default function BakeryOrdersClient() {
         if (!silent) setLoading(false);
       }
     },
-    [query, pushNewOrders]
+    [query, highlightIncoming]
   );
 
   useEffect(() => {
@@ -135,14 +122,9 @@ export default function BakeryOrdersClient() {
   }, [load]);
 
   useEffect(() => {
-    const tick = () => {
-      if (document.visibilityState === "visible") {
-        void load({ silent: true });
-      }
-    };
-    const id = window.setInterval(tick, POLL_MS);
-    return () => window.clearInterval(id);
-  }, [load]);
+    if (ordersVersion === 0) return;
+    void load({ silent: true });
+  }, [ordersVersion, load]);
 
   async function patchStatus(
     id: string,
@@ -171,10 +153,6 @@ export default function BakeryOrdersClient() {
     }
   }
 
-  function dismissAlert(id: string) {
-    setAlerts((prev) => prev.filter((a) => a.id !== id));
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -200,21 +178,9 @@ export default function BakeryOrdersClient() {
           Refresh
         </button>
         <span className="text-xs text-zinc-600">
-          Auto-updates every {POLL_MS / 1000}s
+          Table syncs with the notification bell
         </span>
       </div>
-
-      {alerts.length > 0 && (
-        <div className="space-y-2" role="region" aria-label="New orders">
-          {alerts.map((alert) => (
-            <NewOrderAlert
-              key={alert.id}
-              alert={alert}
-              onDismiss={() => dismissAlert(alert.id)}
-            />
-          ))}
-        </div>
-      )}
 
       {error && (
         <p className="text-sm text-red-400" role="alert">
@@ -323,61 +289,6 @@ export default function BakeryOrdersClient() {
           </table>
         </div>
       )}
-    </div>
-  );
-}
-
-function NewOrderAlert({
-  alert,
-  onDismiss,
-}: {
-  alert: BakeryOrderAlert;
-  onDismiss: () => void;
-}) {
-  return (
-    <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 shadow-lg shadow-amber-950/20">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-amber-100">New order</p>
-          <p className="mt-0.5 text-sm text-zinc-300">{alert.customerLabel}</p>
-          <p className="mt-1 text-xs text-zinc-500">
-            {alert.paymentLabel}
-            {alert.confirmationNumber && (
-              <>
-                {" · "}
-                <span className="font-mono text-amber-200/90">
-                  {alert.confirmationNumber}
-                </span>
-              </>
-            )}
-          </p>
-          <ul className="mt-2 space-y-1 text-sm text-zinc-200">
-            {alert.items.map((item, index) => (
-              <li key={index} className="flex justify-between gap-4">
-                <span>
-                  {item.name} × {item.quantity}
-                </span>
-                <span className="tabular-nums text-zinc-400">
-                  {item.lineTotal != null ? `$${item.lineTotal.toFixed(2)}` : "—"}
-                </span>
-              </li>
-            ))}
-          </ul>
-          {alert.orderTotal > 0 && (
-            <p className="mt-2 text-right text-sm font-semibold text-amber-200">
-              Total ${alert.orderTotal.toFixed(2)}
-            </p>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="shrink-0 rounded-md border border-zinc-600 px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
-          aria-label="Dismiss"
-        >
-          Dismiss
-        </button>
-      </div>
     </div>
   );
 }
