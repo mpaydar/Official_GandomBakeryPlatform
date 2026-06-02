@@ -28,13 +28,25 @@ Deliverables
 
 ## Deploy (Vercel)
 
-The app lives in `frontend/`.
+The Next.js app is in `frontend/`. A **2s build** and **404 NOT_FOUND** mean Vercel did not build Next.js (wrong framework or root directory).
 
-1. **Root Directory:** `frontend`
-2. **Framework Preset:** **Next.js** (recommended). If the preset is stuck on **Services**, `frontend/vercel.json` declares a `web` service so builds still work.
-3. **Environment variables:** `DATABASE_URL`, `JWT_SECRET_KEY`
+### Required Vercel settings
 
-If you see `Project framework is set to "services", but no services are declared`, either switch Framework Preset to **Next.js** in Project Settings → Build & Deployment, or keep **Services** and redeploy (this repo’s `vercel.json` defines the Next app as the `web` service).
+In [Project Settings → Build & Deployment](https://vercel.com/docs/deployments/configure-a-build):
+
+| Setting | Value |
+|--------|--------|
+| **Root Directory** | `frontend` |
+| **Framework Preset** | **Next.js** (not “Services”) |
+| **Install Command** | (leave default, or `pnpm install`) |
+| **Build Command** | (leave default, or `prisma generate && next build`) |
+
+### Environment variables
+
+- `DATABASE_URL` — Postgres connection string (e.g. Neon)
+- `JWT_SECRET_KEY` — long random string for admin sessions
+
+After saving settings, redeploy. A healthy build takes **~1–3 minutes**, not 2 seconds.
 
 The legacy Python/FastAPI `backend/` folder has been removed.
 

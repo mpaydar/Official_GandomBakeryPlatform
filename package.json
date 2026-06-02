@@ -1,0 +1,8 @@
+{
+  "name": "official-gandom-bakery-platform",
+  "private": true,
+  "scripts": {
+    "build": "pnpm --dir frontend run build",
+    "vercel-build": "pnpm --dir frontend run build"
+  }
+}
