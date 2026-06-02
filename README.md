@@ -57,18 +57,30 @@ Dependencies install with **npm** (see `frontend/package-lock.json`). Do not use
 
 If **Root Directory** is empty, root `vercel.json` runs `cd frontend && npm ci && npm run vercel-build`.
 
-### 3. Redeploy
+### 3. Apply database schema (once)
 
-A successful build takes **~1–3 minutes** and logs `prisma generate`, `prisma migrate deploy`, and `next build`.
+Vercel builds **do not** run `prisma migrate deploy` (Neon pooler + advisory locks cause P1002 timeouts). After connecting Neon, run migrations **once** from your machine:
+
+```bash
+cd frontend
+vercel env pull .env.local
+npm ci
+npm run db:migrate
+```
+
+Use **`DATABASE_URL_UNPOOLED`** (direct, no `-pooler` in hostname) in `.env.local` for migrations. Keep **`DATABASE_URL`** (pooled) for the app.
+
+### 4. Redeploy
+
+A successful Vercel build logs `prisma generate` and `next build` (~1–3 min).
 
 ### Local dev with Neon
 
 ```bash
 cd frontend
-cp .env.example .env.local
-# Edit DATABASE_URL and JWT_SECRET_KEY
+vercel env pull .env.local
 npm ci
-npx prisma migrate deploy
+npm run db:migrate
 npm run dev
 ```
 

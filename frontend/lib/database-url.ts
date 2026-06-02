@@ -7,29 +7,31 @@ export function getDatabaseUrl(): string | undefined {
   );
 }
 
-/** Direct URL for Prisma CLI (migrate deploy). Neon requires non-pooled for migrations. */
-export function getMigrationDatabaseUrl(): string | undefined {
-  return (
-    process.env.DIRECT_URL ??
-    process.env.DATABASE_URL_UNPOOLED ??
-    process.env.POSTGRES_URL_NON_POOLING ??
-    getDatabaseUrl()
-  );
+/** True if URL goes through a pooler (advisory locks fail on these). */
+export function isPooledConnectionString(url: string): boolean {
+  try {
+    const host = new URL(url.replace(/^postgres:/, "postgresql:")).hostname;
+    return host.includes("-pooler") || host.includes("pooler.");
+  } catch {
+    return url.includes("-pooler") || url.includes("pooler.");
+  }
 }
 
-/** Set env so Prisma CLI and the app see consistent URLs during Vercel build. */
-export function applyDatabaseEnv(): {
-  pooled: string | undefined;
-  migration: string | undefined;
-} {
-  const pooled = getDatabaseUrl();
-  const migration = getMigrationDatabaseUrl();
+/** Direct URL for Prisma CLI — never fall back to pooled (causes P1002 advisory lock timeout). */
+export function getMigrationDatabaseUrl(): string | undefined {
+  const direct =
+    process.env.DIRECT_URL ??
+    process.env.DATABASE_URL_UNPOOLED ??
+    process.env.POSTGRES_URL_NON_POOLING;
 
-  if (pooled) process.env.DATABASE_URL = pooled;
-  if (migration) {
-    process.env.DIRECT_URL = migration;
-    // prisma.config.ts reads migration URL for CLI
+  if (direct && !isPooledConnectionString(direct)) {
+    return direct;
   }
 
-  return { pooled, migration };
+  const fallback = getDatabaseUrl();
+  if (fallback && !isPooledConnectionString(fallback)) {
+    return fallback;
+  }
+
+  return undefined;
 }
