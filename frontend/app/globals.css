@@ -8,8 +8,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -31,6 +31,5 @@ body {
 }
 
 .landing-theme .font-serif {
-  font-family: var(--font-playfair), "Playfair Display", Georgia, "Times New Roman",
-    serif;
+  font-family: Georgia, "Times New Roman", "Palatino Linotype", serif;
 }

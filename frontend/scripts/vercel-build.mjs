@@ -1,4 +1,8 @@
 import { execSync } from "node:child_process";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const frontendDir = dirname(fileURLToPath(new URL("..", import.meta.url)));
 
 const databaseUrl =
   process.env.DATABASE_URL ??
@@ -24,6 +28,8 @@ Then redeploy.
 
 process.env.DATABASE_URL = databaseUrl;
 
-execSync("npx prisma generate", { stdio: "inherit" });
-execSync("npx prisma migrate deploy", { stdio: "inherit" });
-execSync("npx next build", { stdio: "inherit" });
+const run = (cmd) => execSync(cmd, { stdio: "inherit", cwd: frontendDir });
+
+run("npx prisma generate");
+run("npx prisma migrate deploy");
+run("npm run build");

@@ -1,8 +1,12 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  images:{
+  // Keep Turbopack scoped to this app (avoids picking up lockfiles outside frontend/)
+  turbopack: {
+    root: path.join(__dirname),
+  },
+  images: {
     remotePatterns:[
       {
         protocol:'https',

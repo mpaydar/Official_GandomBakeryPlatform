@@ -6,21 +6,12 @@ import StoreAbout from "@/components/landing/StoreAbout";
 import StoreHero from "@/components/landing/StoreHero";
 import StoreSidebar from "@/components/landing/StoreSidebar";
 import { getStoreProducts } from "@/lib/store-products";
-import { Playfair_Display } from "next/font/google";
-
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-playfair",
-  display: "swap",
-});
 
 export default async function Home() {
   const products = await getStoreProducts();
 
   return (
-    <div
-      className={`landing-theme ${playfair.variable} min-h-screen bg-[#faf8f5] font-sans text-stone-900`}
-    >
+    <div className="landing-theme min-h-screen bg-[#faf8f5] font-sans text-stone-900">
       <LandingHeader />
 
       <nav
