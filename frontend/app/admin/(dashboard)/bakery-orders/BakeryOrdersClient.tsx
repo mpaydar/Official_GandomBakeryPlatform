@@ -13,15 +13,26 @@ type Customer = {
 type OrderRow = {
   id: string;
   itemType: string;
+  itemName: string | null;
   quantity: number;
+  unitPrice: number | null;
+  lineTotal: number | null;
   weightKg: string | null;
   status: string;
   channel: string;
+  paymentMethod: string;
+  confirmationNumber: string | null;
   pickupAt: string | null;
   notes: string | null;
   createdAt: string;
   customer: Customer;
 };
+
+function paymentLabel(method: string) {
+  if (method === "CASH") return "Pay at store";
+  if (method === "CARD") return "Card";
+  return method;
+}
 
 const STATUSES = [
   "PENDING",
@@ -154,13 +165,16 @@ export default function BakeryOrdersClient() {
         <p className="text-sm text-zinc-500">No orders in this view.</p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-zinc-800">
-          <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[960px] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-zinc-800 bg-zinc-900/80">
                 <th className="px-3 py-3 font-medium text-zinc-400">When</th>
                 <th className="px-3 py-3 font-medium text-zinc-400">Customer</th>
                 <th className="px-3 py-3 font-medium text-zinc-400">Item</th>
                 <th className="px-3 py-3 font-medium text-zinc-400">Qty</th>
+                <th className="px-3 py-3 font-medium text-zinc-400">Total</th>
+                <th className="px-3 py-3 font-medium text-zinc-400">Payment</th>
+                <th className="px-3 py-3 font-medium text-zinc-400">Conf. #</th>
                 <th className="px-3 py-3 font-medium text-zinc-400">Status</th>
                 <th className="px-3 py-3 font-medium text-zinc-400">Actions</th>
               </tr>
@@ -177,11 +191,27 @@ export default function BakeryOrdersClient() {
                   <td className="max-w-[200px] truncate px-3 py-3 text-zinc-300">
                     {customerLabel(o.customer)}
                   </td>
-                  <td className="px-3 py-3 capitalize text-zinc-200">
-                    {o.itemType}
+                  <td className="px-3 py-3 text-zinc-200">
+                    <span className="block font-medium">
+                      {o.itemName ?? o.itemType}
+                    </span>
+                    {o.itemName && (
+                      <span className="text-xs capitalize text-zinc-500">
+                        {o.itemType}
+                      </span>
+                    )}
                   </td>
                   <td className="px-3 py-3 tabular-nums text-zinc-300">
                     {o.quantity}
+                  </td>
+                  <td className="px-3 py-3 tabular-nums text-zinc-300">
+                    {o.lineTotal != null ? `$${o.lineTotal.toFixed(2)}` : "—"}
+                  </td>
+                  <td className="px-3 py-3 text-zinc-400">
+                    {paymentLabel(o.paymentMethod)}
+                  </td>
+                  <td className="px-3 py-3 font-mono text-xs text-amber-200/90">
+                    {o.confirmationNumber ?? "—"}
                   </td>
                   <td className="px-3 py-3">
                     <span className="rounded bg-zinc-800 px-2 py-0.5 text-xs font-medium text-amber-200/90">

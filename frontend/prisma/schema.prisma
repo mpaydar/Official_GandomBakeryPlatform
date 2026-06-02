@@ -307,17 +307,21 @@ model BakeryOrder {
   customerId String?
   customer   Customer?         @relation(fields: [customerId], references: [id])
 
-  itemType         String
-  quantity         Int
-  weightKg         Decimal?          @db.Decimal(6, 3)
-  status           BakeryOrderStatus @default(PENDING)
-  channel          OrderChannel
-  confirmedAt      DateTime?
-  rejectedAt       DateTime?
-  rejectionReason  String?
-  expiresAt        DateTime?
-  pickupAt         DateTime?
-  notes            String?
+  itemType             String
+  itemName             String?
+  quantity             Int
+  unitPrice            Decimal?          @db.Decimal(10, 2)
+  weightKg             Decimal?          @db.Decimal(6, 3)
+  status               BakeryOrderStatus @default(PENDING)
+  channel              OrderChannel
+  paymentMethod        PaymentMethod     @default(CASH)
+  confirmationNumber   String?
+  confirmedAt          DateTime?
+  rejectedAt           DateTime?
+  rejectionReason      String?
+  expiresAt            DateTime?
+  pickupAt             DateTime?
+  notes                String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -327,6 +331,7 @@ model BakeryOrder {
   @@index([status])
   @@index([createdAt])
   @@index([expiresAt])
+  @@index([confirmationNumber])
 }
 
 model BakeryOrderNotification {

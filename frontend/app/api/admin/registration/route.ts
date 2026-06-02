@@ -6,6 +6,9 @@ import {
   registerMasterAdmin,
 } from "@/lib/services/admin-users";
 
+/** Always read ADMIN_REGISTRATION_PASSCODE from the deployment runtime, not build output. */
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const masterSetupAllowed = await canRegisterMasterAdmin();
