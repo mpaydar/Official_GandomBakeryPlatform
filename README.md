@@ -72,12 +72,18 @@ Vercel builds **do not** run `prisma migrate deploy` (Neon pooler + advisory loc
 
 ```bash
 cd frontend
-vercel env pull .env.local
+vercel link --yes --project official-gandom-bakery-platform
+# Secret Neon URLs often pull as empty — copy them manually (see below)
+vercel env pull .env.local --environment=production
 npm ci
 npm run db:migrate
 ```
 
-Use **`DATABASE_URL_UNPOOLED`** (direct, no `-pooler` in hostname) in `.env.local` for migrations. Keep **`DATABASE_URL`** (pooled) for the app.
+**Important:** `vercel env pull` may leave `DATABASE_URL=""` for secret vars. If `npm run db:migrate` fails with P1013, open **Vercel → Storage → Neon** (or **Settings → Environment Variables**) and paste the real URLs into `frontend/.env.local`:
+
+- `DATABASE_URL` — pooled (`-pooler` in host)
+- `DATABASE_URL_UNPOOLED` — direct (for migrations)
+- `JWT_SECRET_KEY` — add manually (not from Neon)
 
 ### 4. Redeploy
 
