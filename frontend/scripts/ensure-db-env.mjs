@@ -2,7 +2,8 @@ import { config } from "dotenv";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const frontendDir = dirname(fileURLToPath(new URL("..", import.meta.url)));
+// scripts/ensure-db-env.mjs → go up twice to reach frontend/
+const frontendDir = dirname(dirname(fileURLToPath(import.meta.url)));
 config({ path: resolve(frontendDir, ".env.local") });
 config({ path: resolve(frontendDir, ".env") });
 
