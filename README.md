@@ -47,15 +47,15 @@ The Next.js app is in `frontend/`.
 
 | Setting | Value |
 |--------|--------|
-| **Root Directory** | `frontend` ← important |
-| **Framework Preset** | **Next.js** (not “Services”) |
-| **Install Command** | `npm ci` (or leave default when Root Directory is `frontend`) |
-| **Build Command** | `npm run vercel-build` (Prisma migrate + Next build) |
-| **Node.js Version** | 20.x (set in `frontend/package.json` `engines`) |
+| **Root Directory** | `frontend` ← **required** |
+| **Framework Preset** | **Next.js** (not “Other”, not “Services”) |
+| **Output Directory** | **leave empty** (do not set `public` — Next.js uses `.next` automatically) |
+| **Build Command** | `npm run vercel-build` (or default if empty) |
+| **Node.js Version** | 20.x |
 
-Dependencies install with **npm** (see `frontend/package-lock.json`). Do not use a root `vercel-build` script that skips `npm ci` in `frontend/`.
+If **Output Directory** is set to `public`, the deploy fails after a successful Next build. Clear it and redeploy.
 
-If **Root Directory** is empty, root `vercel.json` runs `cd frontend && npm ci && npm run vercel-build`.
+**Recommended:** Root Directory = `frontend`, then use `frontend/vercel.json` only. If Root Directory is empty, the repo root `vercel.json` runs `cd frontend && …` with `"framework": "nextjs"`.
 
 ### 3. Apply database schema (once)
 
