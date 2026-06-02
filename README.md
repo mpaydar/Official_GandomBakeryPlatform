@@ -46,12 +46,13 @@ The Next.js app is in `frontend/`.
 |--------|--------|
 | **Root Directory** | `frontend` ← important |
 | **Framework Preset** | **Next.js** (not “Services”) |
-| **Install Command** | `pnpm install` (default is fine) |
-| **Build Command** | `pnpm run build` (runs Prisma migrate + Next build) |
+| **Install Command** | `npm ci` (or leave default when Root Directory is `frontend`) |
+| **Build Command** | `npm run vercel-build` (Prisma migrate + Next build) |
+| **Node.js Version** | 20.x (set in `frontend/package.json` `engines`) |
 
-Do **not** use a root `vercel-build` npm script. Dependencies must install inside `frontend/` so `prisma` is on the PATH.
+Dependencies install with **npm** (see `frontend/package-lock.json`). Do not use a root `vercel-build` script that skips `npm ci` in `frontend/`.
 
-If **Root Directory** is left empty, the repo root `vercel.json` runs `cd frontend && pnpm install && pnpm run build` instead.
+If **Root Directory** is empty, root `vercel.json` runs `cd frontend && npm ci && npm run vercel-build`.
 
 ### 3. Redeploy
 
@@ -63,9 +64,9 @@ A successful build takes **~1–3 minutes** and logs `prisma generate`, `prisma 
 cd frontend
 cp .env.example .env.local
 # Edit DATABASE_URL and JWT_SECRET_KEY
-pnpm install
-pnpm exec prisma migrate deploy
-pnpm dev
+npm ci
+npx prisma migrate deploy
+npm run dev
 ```
 
 The legacy Python/FastAPI `backend/` folder has been removed.
