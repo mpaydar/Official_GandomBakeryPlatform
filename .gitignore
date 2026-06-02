@@ -1,6 +1,9 @@
 # pnpm local store (never commit — exceeds GitHub file limits)
 .pnpm-store/
 
+# Node
+node_modules/
+
 # OS & env
 .DS_Store
 .env
