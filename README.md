@@ -26,27 +26,47 @@ Deliverables
 
 • Proof-of-concept for order creation → bakery confirmation flow
 
-## Deploy (Vercel)
+## Deploy (Vercel + Neon)
 
-The Next.js app is in `frontend/`. A **2s build** and **404 NOT_FOUND** mean Vercel did not build Next.js (wrong framework or root directory).
+The Next.js app is in `frontend/`.
 
-### Required Vercel settings
+### 1. Neon database
 
-In [Project Settings → Build & Deployment](https://vercel.com/docs/deployments/configure-a-build):
+1. In [Vercel](https://vercel.com) → your project → **Storage** → **Create Database** → **Neon** (or use [neon.tech](https://neon.tech) and paste the connection string).
+2. Copy the **pooled** Postgres connection string (must include `?sslmode=require`).
+3. Add it in Vercel → **Settings** → **Environment Variables**:
+   - `DATABASE_URL` = your Neon URL (Production, Preview, Development)
+   - `JWT_SECRET_KEY` = a long random secret
+
+### 2. Vercel build settings
+
+**Project Settings → Build & Deployment**
 
 | Setting | Value |
 |--------|--------|
-| **Root Directory** | `frontend` |
+| **Root Directory** | `frontend` ← important |
 | **Framework Preset** | **Next.js** (not “Services”) |
-| **Install Command** | (leave default, or `pnpm install`) |
-| **Build Command** | (leave default, or `prisma generate && next build`) |
+| **Install Command** | `pnpm install` (default is fine) |
+| **Build Command** | `pnpm run build` (runs Prisma migrate + Next build) |
 
-### Environment variables
+Do **not** use a root `vercel-build` npm script. Dependencies must install inside `frontend/` so `prisma` is on the PATH.
 
-- `DATABASE_URL` — Postgres connection string (e.g. Neon)
-- `JWT_SECRET_KEY` — long random string for admin sessions
+If **Root Directory** is left empty, the repo root `vercel.json` runs `cd frontend && pnpm install && pnpm run build` instead.
 
-After saving settings, redeploy. A healthy build takes **~1–3 minutes**, not 2 seconds.
+### 3. Redeploy
+
+A successful build takes **~1–3 minutes** and logs `prisma generate`, `prisma migrate deploy`, and `next build`.
+
+### Local dev with Neon
+
+```bash
+cd frontend
+cp .env.example .env.local
+# Edit DATABASE_URL and JWT_SECRET_KEY
+pnpm install
+pnpm exec prisma migrate deploy
+pnpm dev
+```
 
 The legacy Python/FastAPI `backend/` folder has been removed.
 
