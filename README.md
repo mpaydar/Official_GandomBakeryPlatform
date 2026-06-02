@@ -55,7 +55,14 @@ The Next.js app is in `frontend/`.
 
 If **Output Directory** is set to `public`, the deploy fails after a successful Next build. Clear it and redeploy.
 
-**Recommended:** Root Directory = `frontend`, then use `frontend/vercel.json` only. If Root Directory is empty, the repo root `vercel.json` runs `cd frontend && …` with `"framework": "nextjs"`.
+**Recommended (fixes “No Next.js version detected”):**
+
+1. **Root Directory** = `frontend`
+2. **Framework** = Next.js  
+3. **Output Directory** = empty  
+4. In **Settings**, clear custom Install/Build overrides (use `frontend/vercel.json`: `npm ci` + `npm run vercel-build`)
+
+If Root Directory must stay empty, root `vercel.json` runs `npm install` (for Next detection) then `cd frontend && npm ci`.
 
 ### 3. Apply database schema (once)
 
