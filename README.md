@@ -30,15 +30,16 @@ Deliverables
 
 The Next.js app is in `frontend/`.
 
-### 1. Neon database
+### 1. Neon database (Vercel Storage)
 
-1. In [Vercel](https://vercel.com) → your project → **Storage** → **Create Database** → **Neon** (or use [neon.tech](https://neon.tech) and paste the connection string).
-2. Copy the **pooled** Postgres connection string (must include `?sslmode=require`).
-3. Link the database to this Vercel project (Storage → your Neon DB → **Connect**).
-4. In **Settings** → **Environment Variables**, set (all environments: Production, Preview, Development):
-   - `DATABASE_URL` = Neon **pooled** connection string (`?sslmode=require`)
-     - If Vercel only created `POSTGRES_URL` / `POSTGRES_PRISMA_URL`, copy the pooled URL into `DATABASE_URL` as well (required at **build** time for migrations).
-   - `JWT_SECRET_KEY` = a long random secret
+1. Vercel → **Storage** → create/connect **Neon** → **Connect** to this project (Production, Preview, Development).
+2. Vercel injects (you do **not** need to copy these manually if Connect succeeded):
+   - `DATABASE_URL` — pooled (app runtime)
+   - `DATABASE_URL_UNPOOLED` — direct (Prisma migrations at build)
+   - Legacy: `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, etc. (also supported)
+3. Add manually in **Settings** → **Environment Variables** (all environments):
+   - `JWT_SECRET_KEY` — long random secret (Neon does not create this)
+4. Do **not** wrap values in extra quotes in the Vercel dashboard.
 
 ### 2. Vercel build settings
 

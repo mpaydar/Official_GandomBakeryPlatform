@@ -1,27 +1,35 @@
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-// scripts/vercel-build.mjs → parent directory is frontend/
 const frontendDir = fileURLToPath(new URL("..", import.meta.url));
 
-const databaseUrl =
+const pooled =
   process.env.DATABASE_URL ??
   process.env.POSTGRES_PRISMA_URL ??
   process.env.POSTGRES_URL;
 
-if (!databaseUrl) {
+const migration =
+  process.env.DIRECT_URL ??
+  process.env.DATABASE_URL_UNPOOLED ??
+  process.env.POSTGRES_URL_NON_POOLING ??
+  pooled;
+
+if (!migration) {
   console.error(`
-ERROR: No database URL found for Prisma migrate deploy.
+ERROR: No database URL found.
 
-Add DATABASE_URL in Vercel → Settings → Environment Variables
-(Production, Preview, and Development):
+Link Neon in Vercel → Storage → Connect to this project, then redeploy.
+Vercel should inject DATABASE_URL and DATABASE_URL_UNPOOLED (or POSTGRES_*).
 
-  DATABASE_URL = postgresql://...@ep-xxx.neon.tech/neondb?sslmode=require
+Also add JWT_SECRET_KEY in Settings → Environment Variables.
 `);
   process.exit(1);
 }
 
-process.env.DATABASE_URL = databaseUrl;
+if (pooled) process.env.DATABASE_URL = pooled;
+process.env.DIRECT_URL = migration;
+
+console.log("Database env: pooled=%s migration=%s", pooled ? "yes" : "no", "yes");
 
 function run(label, cmd) {
   console.log(`\n▶ ${label}\n`);
