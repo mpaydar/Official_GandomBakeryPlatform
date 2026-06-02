@@ -1,0 +1,63 @@
+from sqlalchemy import text
+from sqlalchemy import create_connect
+
+There are two ways to be connected and work with PostgresSQL via SQlAlchemy that 
+include the following:
+1. ORM encapsulate approach(wrapping the engine using the sessionmaker)
+2. ORM raw approach
+
+
+db_url= postgresql://postgres:myPassword@localhost:5432/nameOfDB"
+engine=create_connect(db_url)
+session = sessionmaker(autocommit=False,autoflush=False,bind=engine)
+db=session() ; At this point, we are initializing an instance of SQlAlchemy Session
+An instance of SQlAlchemy Session, give you access to different methods. 
+
+1. Data Modification:
+   A. db.add(object)
+   B. db.add_all([obj1,obj2])
+   C. db.delete(obj)
+
+   Keep in mind, it is not a good practice to keep a lot of your queries in flushed staged. 
+   When you write a query for specific set of rows and do flush(), you are essentially put a lock
+   on those rows. So if a teammate wants to make some other updates using those rows, they would be blocked
+   from doing this which would decrease your agile development. 
+
+
+
+db_url= postgresql://postgres:myPassword@localhost:5432/nameOfDB"
+engine=create_connect(db_url)
+with engine.connect() as db_connection
+   query=text("SELECT * FROM table_name")
+   response= db_connection.execute(query)
+   row=response.fetchone()
+   print(row)
+
+
+from fastapi import Depends
+from sqlalchemy.orm import Session 
+def get_all_products(db : Session=Depends(get_db))
+
+
+--------------------------
+General Syntax for the db string to your database:
+
+db_url=postgresql://username:password@host:port/database_name
+Imagine that we want to interact with this db, first thing we do is we create an engine 
+
+>> from sqlalchemy import create_engine
+>> from sqlachemy import text
+
+>> engine=create_engine(db_url)
+>> query=text("INSERT INTO tableOne(ColA,ColB,ColC) Values("A",12,True))
+
+>> with engine.connect() as db_connection:
+>>   try: 
+>>     db_connection.execute(query) 
+>>     db_connection.commit()
+>>    except Exception:
+>>       db_connection.rollback()
+>>       raise
+This is vulnerable for SQL injection attack. 
+
+   

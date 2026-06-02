@@ -1,0 +1,399 @@
+// =============================================================
+//  Persian Supermarket & Bakery — Prisma Schema
+//  Database: PostgreSQL
+// =============================================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================================
+//  ENUMS
+// =============================================================
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  FULFILLED
+  CANCELLED
+  REFUNDED
+}
+
+enum BakeryOrderStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  FULFILLED
+  EXPIRED
+}
+
+enum NotificationChannel {
+  WEBSOCKET
+  SMS
+  PUSH
+  EMAIL
+}
+
+enum DeliveryStatus {
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  ONLINE
+  STORE_CREDIT
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum OrderChannel {
+  WALK_IN
+  PHONE
+  APP
+  ONLINE
+}
+
+// =============================================================
+//  CATALOG
+// =============================================================
+
+model Category {
+  id        String     @id @default(uuid())
+  name      String
+  parentId  String?
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryTree")
+  products  Product[]
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([parentId])
+}
+
+model Product {
+  id            String   @id @default(uuid())
+  categoryId    String
+  category      Category @relation(fields: [categoryId], references: [id])
+
+  nameEn        String
+  nameFa        String
+  barcode       String?  @unique
+  price         Decimal  @db.Decimal(10, 2)
+  cost          Decimal  @db.Decimal(10, 2)
+  unit          String
+  isBakeryItem  Boolean  @default(false)
+  isHalal       Boolean  @default(false)
+  isImported    Boolean  @default(false)
+  isOrganic     Boolean  @default(false)
+  isSeasonal    Boolean  @default(false)
+  isOnSale      Boolean  @default(false)
+  isActive      Boolean  @default(true)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  inventoryLots     InventoryLot[]
+  orderItems        OrderItem[]
+  productTags       ProductTag[]
+  bakeryRecipe      BakeryRecipe?
+  recipeIngredients RecipeIngredient[]
+
+  @@index([categoryId])
+  @@index([barcode])
+  @@index([isActive])
+}
+
+// =============================================================
+//  TAGS
+// =============================================================
+
+model Tag {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  createdAt   DateTime     @default(now())
+
+  productTags ProductTag[]
+}
+
+model ProductTag {
+  productId String
+  tagId     String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([productId, tagId])
+}
+
+// =============================================================
+//  INVENTORY
+// =============================================================
+
+model Supplier {
+  id          String   @id @default(uuid())
+  name        String
+  contactName String?
+  phone       String?
+  email       String?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inventoryLots InventoryLot[]
+}
+
+model InventoryLot {
+  id            String    @id @default(uuid())
+  productId     String
+  product       Product   @relation(fields: [productId], references: [id])
+  supplierId    String?
+  supplier      Supplier? @relation(fields: [supplierId], references: [id])
+
+  quantity      Decimal   @db.Decimal(10, 3)
+  unit          String
+  expiryDate    DateTime?
+  receivedDate  DateTime  @default(now())
+  purchasePrice Decimal   @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([expiryDate])
+}
+
+// =============================================================
+//  CUSTOMERS
+// =============================================================
+
+model Customer {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  phone     String?  @unique
+  email     String?  @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  address      CustomerAddress?
+  orders       Order[]
+  bakeryOrders BakeryOrder[]
+}
+
+model CustomerAddress {
+  id         String   @id @default(uuid())
+  customerId String   @unique
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  street     String
+  city       String
+  postalCode String?
+
+  updatedAt DateTime @updatedAt
+}
+
+// =============================================================
+//  GENERAL ORDERS
+// =============================================================
+
+model Order {
+  id         String       @id @default(uuid())
+  customerId String?
+  customer   Customer?    @relation(fields: [customerId], references: [id])
+
+  subtotal   Decimal      @db.Decimal(10, 2)
+  tax        Decimal      @db.Decimal(10, 2) @default(0)
+  discount   Decimal      @db.Decimal(10, 2) @default(0)
+  total      Decimal      @db.Decimal(10, 2)
+  status     OrderStatus  @default(PENDING)
+  channel    OrderChannel
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items   OrderItem[]
+  payment Payment?
+
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  quantity  Decimal @db.Decimal(10, 3)
+  unitPrice Decimal @db.Decimal(10, 2)
+  lineTotal Decimal @db.Decimal(10, 2)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Payment {
+  id      String        @id @default(uuid())
+  orderId String        @unique
+  order   Order         @relation(fields: [orderId], references: [id])
+
+  method  PaymentMethod
+  amount  Decimal       @db.Decimal(10, 2)
+  status  PaymentStatus @default(PENDING)
+  paidAt  DateTime?
+
+  createdAt DateTime @default(now())
+}
+
+// =============================================================
+//  BAKERY — RECIPES
+// =============================================================
+
+model BakeryRecipe {
+  id            String   @id @default(uuid())
+  productId     String   @unique
+  product       Product  @relation(fields: [productId], references: [id])
+
+  name          String
+  yieldQuantity Decimal  @db.Decimal(8, 3)
+  yieldUnit     String
+  prepMinutes   Int      @default(0)
+  bakeMinutes   Int      @default(0)
+  notes         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ingredients RecipeIngredient[]
+}
+
+model RecipeIngredient {
+  id        String       @id @default(uuid())
+  recipeId  String
+  recipe    BakeryRecipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product      @relation(fields: [productId], references: [id])
+
+  quantity Decimal @db.Decimal(10, 3)
+  unit     String
+
+  @@index([recipeId])
+}
+
+// =============================================================
+//  BAKERY ORDERS
+// =============================================================
+
+model BakeryOrder {
+  id         String            @id @default(uuid())
+  customerId String?
+  customer   Customer?         @relation(fields: [customerId], references: [id])
+
+  itemType         String
+  quantity         Int
+  weightKg         Decimal?          @db.Decimal(6, 3)
+  status           BakeryOrderStatus @default(PENDING)
+  channel          OrderChannel
+  confirmedAt      DateTime?
+  rejectedAt       DateTime?
+  rejectionReason  String?
+  expiresAt        DateTime?
+  pickupAt         DateTime?
+  notes            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  notifications BakeryOrderNotification[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([expiresAt])
+}
+
+model BakeryOrderNotification {
+  id            String              @id @default(uuid())
+  bakeryOrderId String
+  bakeryOrder   BakeryOrder         @relation(fields: [bakeryOrderId], references: [id], onDelete: Cascade)
+
+  channel        NotificationChannel
+  payload        Json
+  deliveryStatus DeliveryStatus      @default(SENT)
+  sentAt         DateTime            @default(now())
+  readAt         DateTime?
+
+  @@index([bakeryOrderId])
+  @@index([deliveryStatus])
+}
+
+// =============================================================
+//  ADMIN & DAILY CAPACITY
+// =============================================================
+
+model AdminUser {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  firstName    String
+  lastName     String
+  passwordHash String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model BakeryDailyCapacity {
+  businessDate DateTime @id @db.Date @map("business_date")
+  maxLoaves    Int      @map("max_loaves")
+
+  @@map("bakery_daily_capacity")
+}
+
+// =============================================================
+//  EMPLOYEES & SHIFTS
+// =============================================================
+
+model Employee {
+  id       String  @id @default(uuid())
+  name     String
+  role     String
+  phone    String?
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shifts Shift[]
+}
+
+model Shift {
+  id         String    @id @default(uuid())
+  employeeId String
+  employee   Employee  @relation(fields: [employeeId], references: [id])
+
+  startTime DateTime
+  endTime   DateTime?
+  notes     String?
+
+  createdAt DateTime @default(now())
+
+  @@index([employeeId])
+  @@index([startTime])
+}
