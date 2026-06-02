@@ -28,7 +28,15 @@ Deliverables
 
 ## Deploy (Vercel)
 
-The app lives in `frontend/`. In Vercel, set **Root Directory** to `frontend`, connect Postgres (`DATABASE_URL`), and set `JWT_SECRET_KEY`. The legacy Python/FastAPI `backend/` folder has been removed.
+The app lives in `frontend/`.
+
+1. **Root Directory:** `frontend`
+2. **Framework Preset:** **Next.js** (recommended). If the preset is stuck on **Services**, `frontend/vercel.json` declares a `web` service so builds still work.
+3. **Environment variables:** `DATABASE_URL`, `JWT_SECRET_KEY`
+
+If you see `Project framework is set to "services", but no services are declared`, either switch Framework Preset to **Next.js** in Project Settings → Build & Deployment, or keep **Services** and redeploy (this repo’s `vercel.json` defines the Next app as the `web` service).
+
+The legacy Python/FastAPI `backend/` folder has been removed.
 
 ### POS System Features:
 

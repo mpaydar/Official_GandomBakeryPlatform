@@ -1,6 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "nextjs",
+  "installCommand": "pnpm install",
   "buildCommand": "prisma generate && next build",
-  "installCommand": "pnpm install"
+  "experimentalServices": {
+    "web": {
+      "entrypoint": ".",
+      "routePrefix": "/",
+      "framework": "nextjs"
+    }
+  }
 }
