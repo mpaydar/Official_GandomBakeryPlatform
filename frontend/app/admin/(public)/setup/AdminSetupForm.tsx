@@ -7,10 +7,15 @@ import Link from "next/link";
 const inputClass =
   "mt-1.5 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-100 outline-none ring-amber-500/0 transition focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/30";
 
-export default function AdminSetupForm() {
+type Props = {
+  mode: "master" | "additional";
+};
+
+export default function AdminSetupForm({ mode }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const isMaster = mode === "master";
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -26,6 +31,8 @@ export default function AdminSetupForm() {
     const password = (form.elements.namedItem("password") as HTMLInputElement)
       .value;
     const confirm = (form.elements.namedItem("confirm") as HTMLInputElement)
+      .value;
+    const passcode = (form.elements.namedItem("passcode") as HTMLInputElement)
       .value;
 
     if (password !== confirm) {
@@ -43,6 +50,7 @@ export default function AdminSetupForm() {
           last_name,
           user_name: username,
           hashpass: password,
+          passcode,
         }),
       });
       if (!res.ok) {
@@ -50,7 +58,9 @@ export default function AdminSetupForm() {
         setError(
           typeof data.error === "string"
             ? data.error
-            : "Could not create master admin"
+            : isMaster
+              ? "Could not create master admin"
+              : "Could not create admin account"
         );
         setLoading(false);
         return;
@@ -67,15 +77,33 @@ export default function AdminSetupForm() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4">
       <div className="w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-900/80 p-8 shadow-xl">
         <h1 className="text-center text-xl font-semibold tracking-tight text-zinc-100">
-          Create master admin
+          {isMaster ? "Create master admin" : "Create admin account"}
         </h1>
         <p className="mt-1 text-center text-sm text-zinc-500">
-          One-time setup for the store owner. Additional admins cannot be created
-          here.
+          {isMaster
+            ? "One-time store owner setup. You need the registration passcode from whoever configured this site."
+            : "Enter the registration passcode from the master admin, then choose your login details."}
         </p>
 
         <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-3">
+            <div>
+              <label
+                htmlFor="passcode"
+                className="block text-xs font-medium uppercase tracking-wide text-zinc-400"
+              >
+                Registration passcode
+              </label>
+              <input
+                id="passcode"
+                name="passcode"
+                type="password"
+                autoComplete="off"
+                required
+                className={inputClass}
+                placeholder="From master admin"
+              />
+            </div>
             <div>
               <label
                 htmlFor="username"
@@ -174,7 +202,11 @@ export default function AdminSetupForm() {
             disabled={loading}
             className="flex w-full items-center justify-center rounded-lg bg-amber-500 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-amber-400 disabled:opacity-60"
           >
-            {loading ? "Creating…" : "Create master admin"}
+            {loading
+              ? "Creating…"
+              : isMaster
+                ? "Create master admin"
+                : "Create admin account"}
           </button>
         </form>
 

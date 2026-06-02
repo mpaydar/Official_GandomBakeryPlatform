@@ -1,3 +1,4 @@
+import { verifyAdminRegistrationPasscode } from "@/lib/admin-registration-passcode";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { createAdminAccessToken } from "@/lib/jwt";
@@ -11,18 +12,17 @@ export async function canRegisterMasterAdmin(): Promise<boolean> {
   return !(await hasMasterAdmin());
 }
 
-/** One-time master admin setup only — fails if any admin already exists. */
-export async function registerMasterAdmin(input: {
+/** Create an admin account when the registration passcode is valid. */
+export async function registerAdmin(input: {
   firstName: string;
   lastName: string;
   username: string;
   password: string;
+  passcode: string;
 }) {
-  if (await hasMasterAdmin()) {
-    return {
-      ok: false as const,
-      error: "Master admin already exists. Sign in instead.",
-    };
+  const passcodeCheck = verifyAdminRegistrationPasscode(input.passcode);
+  if (!passcodeCheck.ok) {
+    return { ok: false as const, error: passcodeCheck.error };
   }
 
   const username = input.username.trim().toLowerCase();
@@ -53,6 +53,19 @@ export async function registerMasterAdmin(input: {
     },
   });
   return { ok: true as const };
+}
+
+/** First admin only — requires passcode; fails if any admin already exists. */
+export async function registerMasterAdmin(
+  input: Parameters<typeof registerAdmin>[0]
+) {
+  if (await hasMasterAdmin()) {
+    return {
+      ok: false as const,
+      error: "Master admin already exists. Sign in instead.",
+    };
+  }
+  return registerAdmin(input);
 }
 
 export async function loginAdmin(username: string, password: string) {

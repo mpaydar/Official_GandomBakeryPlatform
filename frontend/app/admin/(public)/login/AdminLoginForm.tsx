@@ -5,10 +5,14 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 type Props = {
-  setupAllowed: boolean;
+  masterSetupAllowed: boolean;
+  registrationEnabled: boolean;
 };
 
-export default function AdminLoginForm({ setupAllowed }: Props) {
+export default function AdminLoginForm({
+  masterSetupAllowed,
+  registrationEnabled,
+}: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -101,7 +105,7 @@ export default function AdminLoginForm({ setupAllowed }: Props) {
             {loading ? "Signing in…" : "Sign in"}
           </button>
 
-          {setupAllowed ? (
+          {masterSetupAllowed ? (
             <p className="text-center text-sm text-zinc-500">
               First time?{" "}
               <Link
@@ -111,10 +115,19 @@ export default function AdminLoginForm({ setupAllowed }: Props) {
                 Create master admin
               </Link>
             </p>
+          ) : registrationEnabled ? (
+            <p className="text-center text-sm text-zinc-500">
+              Have a registration passcode?{" "}
+              <Link
+                href="/admin/setup"
+                className="font-medium text-amber-400 hover:text-amber-300"
+              >
+                Create admin account
+              </Link>
+            </p>
           ) : (
             <p className="text-center text-xs leading-relaxed text-zinc-500">
-              Master admin is already set up. Use the username and password from
-              first-time setup.
+              Sign in with the username and password you were given.
               <br />
               <span className="text-zinc-600">
                 (If you used the old form, try first+last name with no space,

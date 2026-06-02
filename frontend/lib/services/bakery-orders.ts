@@ -92,6 +92,80 @@ export async function createBakeryOrder(input: {
   return { ok: true as const, orderId: order.id };
 }
 
+export async function createBakeryOrdersBatch(input: {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  items: Array<{
+    quantity: number;
+    itemType: string;
+  }>;
+  pickupAt: string | null;
+  notes: string | null;
+}) {
+  if (!Array.isArray(input.items) || input.items.length === 0) {
+    return { ok: false as const, error: "Cart is empty" };
+  }
+
+  const normalizedItems = input.items
+    .map((item) => ({
+      itemType: (item.itemType || "").trim().toLowerCase(),
+      quantity: Math.trunc(item.quantity),
+    }))
+    .filter((item) => item.itemType.length > 0);
+
+  if (normalizedItems.length === 0) {
+    return { ok: false as const, error: "No valid items to order" };
+  }
+
+  if (normalizedItems.some((item) => !Number.isFinite(item.quantity) || item.quantity < 1)) {
+    return { ok: false as const, error: "Invalid quantity" };
+  }
+
+  const phone = input.phone.trim();
+  const firstName = input.firstName.trim();
+  const lastName = input.lastName.trim();
+  if (!phone || !firstName || !lastName) {
+    return { ok: false as const, error: "Missing customer fields" };
+  }
+
+  const createdOrders = await prisma.$transaction(async (tx) => {
+    let customer = await tx.customer.findFirst({ where: { phone } });
+    if (!customer) {
+      customer = await tx.customer.create({
+        data: { firstName, lastName, phone },
+      });
+    } else {
+      customer = await tx.customer.update({
+        where: { id: customer.id },
+        data: { firstName, lastName },
+      });
+    }
+
+    const orders = await Promise.all(
+      normalizedItems.map((item) =>
+        tx.bakeryOrder.create({
+          data: {
+            customerId: customer.id,
+            itemType: item.itemType,
+            quantity: item.quantity,
+            channel: OrderChannel.ONLINE,
+            pickupAt: input.pickupAt ? new Date(input.pickupAt) : null,
+            notes: input.notes,
+          },
+        })
+      )
+    );
+
+    return orders;
+  });
+
+  return {
+    ok: true as const,
+    orderIds: createdOrders.map((order) => order.id),
+  };
+}
+
 export async function updateBakeryOrderStatus(
   id: string,
   status: string,

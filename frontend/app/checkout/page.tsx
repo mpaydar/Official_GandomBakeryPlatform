@@ -23,6 +23,7 @@ export default function CheckoutPage() {
   const [mounted, setMounted] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState("");
+  const [orderIds, setOrderIds] = useState<string[]>([]);
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -39,21 +40,29 @@ export default function CheckoutPage() {
     setError("");
 
     try {
-      await Promise.all(
-        cart.map((item) =>
-          fetch("/api/bakery/orders", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              firstName,
-              lastName,
-              phone,
-              quantity: item.quantity,
-              itemType: item.itemType,
-            }),
-          }).then((r) => { if (!r.ok) throw new Error(); })
-        )
-      );
+      const res = await fetch("/api/bakery/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          phone,
+          items: cart.map((item) => ({
+            quantity: item.quantity,
+            itemType: item.itemType,
+          })),
+        }),
+      });
+      if (!res.ok) {
+        throw new Error();
+      }
+      const data = (await res.json()) as { orderIds?: string[]; orderId?: string };
+      const ids = Array.isArray(data.orderIds)
+        ? data.orderIds
+        : data.orderId
+          ? [data.orderId]
+          : [];
+      setOrderIds(ids);
       clearCart();
       setStatus("success");
     } catch {
@@ -73,6 +82,12 @@ export default function CheckoutPage() {
             <p className="mt-2 text-sm text-amber-200/60">
               We received your order and will reach out to confirm pickup.
             </p>
+            {orderIds.length > 0 && (
+              <p className="mt-3 text-xs text-amber-200/80">
+                Tracking ID{orderIds.length > 1 ? "s" : ""}:{" "}
+                {orderIds.map((id) => id.slice(0, 8)).join(", ")}
+              </p>
+            )}
             <Link
               href="/"
               className="mt-8 block w-full rounded-xl bg-amber-500 py-3 text-center text-sm font-bold text-slate-900 transition hover:bg-amber-400"
