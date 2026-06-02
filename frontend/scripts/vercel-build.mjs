@@ -1,7 +1,9 @@
 import { execSync } from "node:child_process";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const frontendDir = fileURLToPath(new URL("..", import.meta.url));
+const repoRoot = join(frontendDir, "..");
 
 const pooled =
   process.env.DATABASE_URL ??
@@ -43,3 +45,12 @@ console.log(
 );
 
 run("Next.js build", "npm run build");
+
+// Vercel project root is the repo; Next writes to frontend/.next
+if (process.env.VERCEL === "1") {
+  console.log("\n▶ Link frontend/.next → repo .next for Vercel deploy\n");
+  execSync("rm -rf .next && ln -sfn frontend/.next .next", {
+    cwd: repoRoot,
+    stdio: "inherit",
+  });
+}

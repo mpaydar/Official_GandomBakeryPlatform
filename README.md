@@ -62,7 +62,9 @@ If **Output Directory** is set to `public`, the deploy fails after a successful 
 3. **Output Directory** = empty  
 4. In **Settings**, clear custom Install/Build overrides (use `frontend/vercel.json`: `npm ci` + `npm run vercel-build`)
 
-If Root Directory must stay empty, root `vercel.json` runs `npm install` (for Next detection) then `cd frontend && npm ci`.
+If Root Directory must stay empty, root `vercel.json` runs `npm install` then `cd frontend && npm ci`, and links `frontend/.next` → `.next` at the repo root after build.
+
+**Best:** set **Root Directory** to `frontend` (then Vercel finds `frontend/.next` automatically; no symlink needed).
 
 ### 3. Apply database schema (once)
 
