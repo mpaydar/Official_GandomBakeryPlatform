@@ -1,38 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import {
+  buildBakeryOrderAlerts,
+  customerDisplayName,
+  paymentDisplayLabel,
+  type BakeryOrderAlert,
+  type BakeryOrderRow,
+} from "@/lib/bakery-order-alerts";
 
-type Customer = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  phone: string | null;
-} | null;
-
-type OrderRow = {
-  id: string;
-  itemType: string;
-  itemName: string | null;
-  quantity: number;
+type OrderRow = BakeryOrderRow & {
   unitPrice: number | null;
-  lineTotal: number | null;
   weightKg: string | null;
   status: string;
   channel: string;
-  paymentMethod: string;
-  confirmationNumber: string | null;
   pickupAt: string | null;
   notes: string | null;
-  createdAt: string;
-  customer: Customer;
 };
 
-function paymentLabel(method: string) {
-  if (method === "CASH") return "Pay at store";
-  if (method === "CARD") return "Card";
-  return method;
-}
+const POLL_MS = 5000;
+const HIGHLIGHT_MS = 12_000;
 
 const STATUSES = [
   "PENDING",
@@ -56,10 +44,16 @@ export default function BakeryOrdersClient() {
   useEffect(() => {
     setStatusFilter(searchParams.get("status") ?? "");
   }, [searchParams]);
+
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [alerts, setAlerts] = useState<BakeryOrderAlert[]>([]);
+  const [highlightIds, setHighlightIds] = useState<Set<string>>(new Set());
+
+  const ordersSnapshotRef = useRef<OrderRow[]>([]);
+  const hasHydratedRef = useRef(false);
 
   const query = useMemo(() => {
     const q = new URLSearchParams();
@@ -67,31 +61,87 @@ export default function BakeryOrdersClient() {
     return q.toString();
   }, [statusFilter]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(
-        `/api/admin/bakery-orders${query ? `?${query}` : ""}`,
-        { credentials: "include" }
-      );
-      if (!res.ok) {
-        setError("Could not load orders");
-        setOrders([]);
-        return;
+  const pushNewOrders = useCallback((incoming: OrderRow[]) => {
+    if (incoming.length === 0) return;
+
+    const built = buildBakeryOrderAlerts(incoming);
+    setAlerts((prev) => {
+      const seen = new Set(prev.map((a) => a.id));
+      const fresh = built.filter((a) => !seen.has(a.id));
+      return [...fresh, ...prev].slice(0, 8);
+    });
+
+    setHighlightIds((prev) => {
+      const next = new Set(prev);
+      for (const order of incoming) next.add(order.id);
+      return next;
+    });
+
+    window.setTimeout(() => {
+      setHighlightIds((prev) => {
+        const next = new Set(prev);
+        for (const order of incoming) next.delete(order.id);
+        return next;
+      });
+    }, HIGHLIGHT_MS);
+  }, []);
+
+  const load = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const silent = options?.silent ?? false;
+      if (!silent) {
+        setLoading(true);
       }
-      const data = (await res.json()) as { orders: OrderRow[] };
-      setOrders(data.orders);
-    } catch {
-      setError("Network error");
-      setOrders([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [query]);
+      setError(null);
+      try {
+        const res = await fetch(
+          `/api/admin/bakery-orders${query ? `?${query}` : ""}`,
+          { credentials: "include", cache: "no-store" }
+        );
+        if (!res.ok) {
+          setError("Could not load orders");
+          if (!silent) setOrders([]);
+          return;
+        }
+        const data = (await res.json()) as { orders: OrderRow[] };
+        const next = data.orders;
+
+        if (hasHydratedRef.current) {
+          const prev = ordersSnapshotRef.current;
+          const incoming = next.filter(
+            (order) => !prev.some((row) => row.id === order.id)
+          );
+          pushNewOrders(incoming);
+        } else {
+          hasHydratedRef.current = true;
+        }
+
+        ordersSnapshotRef.current = next;
+        setOrders(next);
+      } catch {
+        setError("Network error");
+        if (!silent) setOrders([]);
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [query, pushNewOrders]
+  );
 
   useEffect(() => {
+    hasHydratedRef.current = false;
+    ordersSnapshotRef.current = [];
     void load();
+  }, [load]);
+
+  useEffect(() => {
+    const tick = () => {
+      if (document.visibilityState === "visible") {
+        void load({ silent: true });
+      }
+    };
+    const id = window.setInterval(tick, POLL_MS);
+    return () => window.clearInterval(id);
   }, [load]);
 
   async function patchStatus(
@@ -113,7 +163,7 @@ export default function BakeryOrdersClient() {
         setError(typeof data.error === "string" ? data.error : "Update failed");
         return;
       }
-      await load();
+      await load({ silent: true });
     } catch {
       setError("Network error");
     } finally {
@@ -121,10 +171,8 @@ export default function BakeryOrdersClient() {
     }
   }
 
-  function customerLabel(c: Customer) {
-    if (!c) return "—";
-    const name = `${c.firstName} ${c.lastName}`.trim();
-    return c.phone ? `${name} · ${c.phone}` : name;
+  function dismissAlert(id: string) {
+    setAlerts((prev) => prev.filter((a) => a.id !== id));
   }
 
   return (
@@ -151,7 +199,22 @@ export default function BakeryOrdersClient() {
         >
           Refresh
         </button>
+        <span className="text-xs text-zinc-600">
+          Auto-updates every {POLL_MS / 1000}s
+        </span>
       </div>
+
+      {alerts.length > 0 && (
+        <div className="space-y-2" role="region" aria-label="New orders">
+          {alerts.map((alert) => (
+            <NewOrderAlert
+              key={alert.id}
+              alert={alert}
+              onDismiss={() => dismissAlert(alert.id)}
+            />
+          ))}
+        </div>
+      )}
 
       {error && (
         <p className="text-sm text-red-400" role="alert">
@@ -183,13 +246,17 @@ export default function BakeryOrdersClient() {
               {orders.map((o) => (
                 <tr
                   key={o.id}
-                  className="border-b border-zinc-800/80 last:border-0 hover:bg-zinc-900/40"
+                  className={`border-b border-zinc-800/80 last:border-0 hover:bg-zinc-900/40 ${
+                    highlightIds.has(o.id)
+                      ? "bg-amber-500/10 ring-1 ring-inset ring-amber-500/40"
+                      : ""
+                  }`}
                 >
                   <td className="whitespace-nowrap px-3 py-3 text-zinc-500">
                     {new Date(o.createdAt).toLocaleString()}
                   </td>
                   <td className="max-w-[200px] truncate px-3 py-3 text-zinc-300">
-                    {customerLabel(o.customer)}
+                    {customerDisplayName(o.customer)}
                   </td>
                   <td className="px-3 py-3 text-zinc-200">
                     <span className="block font-medium">
@@ -208,7 +275,7 @@ export default function BakeryOrdersClient() {
                     {o.lineTotal != null ? `$${o.lineTotal.toFixed(2)}` : "—"}
                   </td>
                   <td className="px-3 py-3 text-zinc-400">
-                    {paymentLabel(o.paymentMethod)}
+                    {paymentDisplayLabel(o.paymentMethod)}
                   </td>
                   <td className="px-3 py-3 font-mono text-xs text-amber-200/90">
                     {o.confirmationNumber ?? "—"}
@@ -256,6 +323,61 @@ export default function BakeryOrdersClient() {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+function NewOrderAlert({
+  alert,
+  onDismiss,
+}: {
+  alert: BakeryOrderAlert;
+  onDismiss: () => void;
+}) {
+  return (
+    <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 shadow-lg shadow-amber-950/20">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-amber-100">New order</p>
+          <p className="mt-0.5 text-sm text-zinc-300">{alert.customerLabel}</p>
+          <p className="mt-1 text-xs text-zinc-500">
+            {alert.paymentLabel}
+            {alert.confirmationNumber && (
+              <>
+                {" · "}
+                <span className="font-mono text-amber-200/90">
+                  {alert.confirmationNumber}
+                </span>
+              </>
+            )}
+          </p>
+          <ul className="mt-2 space-y-1 text-sm text-zinc-200">
+            {alert.items.map((item, index) => (
+              <li key={index} className="flex justify-between gap-4">
+                <span>
+                  {item.name} × {item.quantity}
+                </span>
+                <span className="tabular-nums text-zinc-400">
+                  {item.lineTotal != null ? `$${item.lineTotal.toFixed(2)}` : "—"}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {alert.orderTotal > 0 && (
+            <p className="mt-2 text-right text-sm font-semibold text-amber-200">
+              Total ${alert.orderTotal.toFixed(2)}
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="shrink-0 rounded-md border border-zinc-600 px-2 py-1 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+          aria-label="Dismiss"
+        >
+          Dismiss
+        </button>
+      </div>
     </div>
   );
 }

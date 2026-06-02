@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-api";
 import { listBakeryOrders } from "@/lib/services/bakery-orders";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   const denied = await requireAdmin();
   if (denied) return denied;

@@ -8,7 +8,7 @@ export default function AdminBakeryOrdersPage() {
         Bakery orders
       </h1>
       <p className="mt-1 text-sm text-zinc-500">
-        Review and update order status
+        New orders appear automatically with confirmation details — no refresh needed
       </p>
       <div className="mt-8">
         <Suspense
