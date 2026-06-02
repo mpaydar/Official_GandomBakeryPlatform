@@ -47,7 +47,7 @@ The Next.js app is in `frontend/`.
 
 | Setting | Value |
 |--------|--------|
-| **Root Directory** | `frontend` ← **required** |
+| **Root Directory** | `frontend` ← **required** (if empty, Vercel reads repo-root `package.json` and fails “No Next.js version detected”) |
 | **Framework Preset** | **Next.js** (not “Other”, not “Services”) |
 | **Output Directory** | **leave empty** (do not set `public` — Next.js uses `.next` automatically) |
 | **Build Command** | `npm run vercel-build` (or default if empty) |

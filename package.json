@@ -2,5 +2,8 @@
   "private": true,
   "engines": {
     "node": "20.x"
+  },
+  "dependencies": {
+    "next": "16.2.7"
   }
 }
