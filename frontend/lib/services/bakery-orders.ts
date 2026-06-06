@@ -7,6 +7,10 @@ import {
 import { generateConfirmationNumber } from "@/lib/confirmation-number";
 import { prisma } from "@/lib/prisma";
 import { createCheckoutReceipt, markReceiptPaidAtPickup } from "@/lib/services/receipts";
+import {
+  releaseInventoryForOrder,
+  reserveInventoryForOrder,
+} from "@/lib/services/inventory";
 
 function serializeOrder(
   order: Prisma.BakeryOrderGetPayload<{ include: { customer: true } }>
@@ -110,65 +114,79 @@ export async function createBakeryOrder(input: {
       ? input.unitPrice
       : null;
 
-  const order = await prisma.$transaction(async (tx) => {
-    let customer = await tx.customer.findFirst({ where: { phone } });
-    if (!customer) {
-      customer = await tx.customer.create({
-        data: { firstName, lastName, phone },
-      });
-    } else {
-      customer = await tx.customer.update({
-        where: { id: customer.id },
-        data: { firstName, lastName },
-      });
-    }
+  try {
+    const order = await prisma.$transaction(async (tx) => {
+      let customer = await tx.customer.findFirst({ where: { phone } });
+      if (!customer) {
+        customer = await tx.customer.create({
+          data: { firstName, lastName, phone },
+        });
+      } else {
+        customer = await tx.customer.update({
+          where: { id: customer.id },
+          data: { firstName, lastName },
+        });
+      }
 
-    const confirmationNumber = await allocateConfirmationNumber(tx);
+      const confirmationNumber = await allocateConfirmationNumber(tx);
 
-    const receipt = await createCheckoutReceipt({
-      tx,
-      confirmationNumber,
-      firstName,
-      lastName,
-      phone,
-      paymentMethod: input.paymentMethod,
-      items: [
+      const stockCheck = await reserveInventoryForOrder(tx, [
         {
           itemType: input.itemType.trim().toLowerCase(),
           itemName: input.itemName?.trim() || null,
           quantity: qty,
-          unitPrice,
         },
-      ],
-    });
+      ]);
+      if (!stockCheck.ok) {
+        throw new Error(stockCheck.error);
+      }
 
-    const order = await tx.bakeryOrder.create({
-      data: {
-        customerId: customer.id,
-        checkoutReceiptId: receipt.id,
-        itemType: input.itemType.trim().toLowerCase(),
-        itemName: input.itemName?.trim() || null,
-        quantity: qty,
-        unitPrice,
-        paymentMethod: input.paymentMethod,
+      const receipt = await createCheckoutReceipt({
+        tx,
         confirmationNumber,
-        channel: OrderChannel.ONLINE,
-        pickupAt: input.pickupAt ? new Date(input.pickupAt) : null,
-        notes: input.notes,
-      },
-      include: { customer: true },
+        firstName,
+        lastName,
+        phone,
+        paymentMethod: input.paymentMethod,
+        items: [
+          {
+            itemType: input.itemType.trim().toLowerCase(),
+            itemName: input.itemName?.trim() || null,
+            quantity: qty,
+            unitPrice,
+          },
+        ],
+      });
+
+      return tx.bakeryOrder.create({
+        data: {
+          customerId: customer.id,
+          checkoutReceiptId: receipt.id,
+          itemType: input.itemType.trim().toLowerCase(),
+          itemName: input.itemName?.trim() || null,
+          quantity: qty,
+          unitPrice,
+          paymentMethod: input.paymentMethod,
+          confirmationNumber,
+          channel: OrderChannel.ONLINE,
+          pickupAt: input.pickupAt ? new Date(input.pickupAt) : null,
+          notes: input.notes,
+        },
+        include: { customer: true },
+      });
     });
 
-    return order;
-  });
-
-  return {
-    ok: true as const,
-    orderId: order.id,
-    confirmationNumber: order.confirmationNumber,
-    paymentMethod: order.paymentMethod,
-    receiptId: order.checkoutReceiptId,
-  };
+    return {
+      ok: true as const,
+      orderId: order.id,
+      confirmationNumber: order.confirmationNumber,
+      paymentMethod: order.paymentMethod,
+      receiptId: order.checkoutReceiptId,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Could not create order";
+    return { ok: false as const, error: message };
+  }
 }
 
 export async function createBakeryOrdersBatch(input: {
@@ -216,66 +234,76 @@ export async function createBakeryOrdersBatch(input: {
     return { ok: false as const, error: "Missing customer fields" };
   }
 
-  const createdOrders = await prisma.$transaction(async (tx) => {
-    let customer = await tx.customer.findFirst({ where: { phone } });
-    if (!customer) {
-      customer = await tx.customer.create({
-        data: { firstName, lastName, phone },
-      });
-    } else {
-      customer = await tx.customer.update({
-        where: { id: customer.id },
-        data: { firstName, lastName },
-      });
-    }
+  try {
+    const createdOrders = await prisma.$transaction(async (tx) => {
+      let customer = await tx.customer.findFirst({ where: { phone } });
+      if (!customer) {
+        customer = await tx.customer.create({
+          data: { firstName, lastName, phone },
+        });
+      } else {
+        customer = await tx.customer.update({
+          where: { id: customer.id },
+          data: { firstName, lastName },
+        });
+      }
 
-    const confirmationNumber = await allocateConfirmationNumber(tx);
+      const confirmationNumber = await allocateConfirmationNumber(tx);
 
-    const receipt = await createCheckoutReceipt({
-      tx,
-      confirmationNumber,
-      firstName,
-      lastName,
-      phone,
-      paymentMethod: input.paymentMethod,
-      items: normalizedItems.map((item) => ({
-        itemType: item.itemType,
-        itemName: item.itemName,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-      })),
+      const stockCheck = await reserveInventoryForOrder(tx, normalizedItems);
+      if (!stockCheck.ok) {
+        throw new Error(stockCheck.error);
+      }
+
+      const receipt = await createCheckoutReceipt({
+        tx,
+        confirmationNumber,
+        firstName,
+        lastName,
+        phone,
+        paymentMethod: input.paymentMethod,
+        items: normalizedItems.map((item) => ({
+          itemType: item.itemType,
+          itemName: item.itemName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+        })),
+      });
+
+      const orders = await Promise.all(
+        normalizedItems.map((item) =>
+          tx.bakeryOrder.create({
+            data: {
+              customerId: customer.id,
+              checkoutReceiptId: receipt.id,
+              itemType: item.itemType,
+              itemName: item.itemName,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              paymentMethod: input.paymentMethod,
+              confirmationNumber,
+              channel: OrderChannel.ONLINE,
+              pickupAt: input.pickupAt ? new Date(input.pickupAt) : null,
+              notes: input.notes,
+            },
+          })
+        )
+      );
+
+      return { orders, confirmationNumber, receiptId: receipt.id };
     });
 
-    const orders = await Promise.all(
-      normalizedItems.map((item) =>
-        tx.bakeryOrder.create({
-          data: {
-            customerId: customer.id,
-            checkoutReceiptId: receipt.id,
-            itemType: item.itemType,
-            itemName: item.itemName,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            paymentMethod: input.paymentMethod,
-            confirmationNumber,
-            channel: OrderChannel.ONLINE,
-            pickupAt: input.pickupAt ? new Date(input.pickupAt) : null,
-            notes: input.notes,
-          },
-        })
-      )
-    );
-
-    return { orders, confirmationNumber, receiptId: receipt.id };
-  });
-
-  return {
-    ok: true as const,
-    orderIds: createdOrders.orders.map((order) => order.id),
-    confirmationNumber: createdOrders.confirmationNumber,
-    paymentMethod: input.paymentMethod,
-    receiptId: createdOrders.receiptId,
-  };
+    return {
+      ok: true as const,
+      orderIds: createdOrders.orders.map((order) => order.id),
+      confirmationNumber: createdOrders.confirmationNumber,
+      paymentMethod: input.paymentMethod,
+      receiptId: createdOrders.receiptId,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Could not create order";
+    return { ok: false as const, error: message };
+  }
 }
 
 export async function updateBakeryOrderStatus(
@@ -303,10 +331,28 @@ export async function updateBakeryOrderStatus(
     data.rejectionReason = rejectionReason;
   }
 
-  const order = await prisma.bakeryOrder.update({
-    where: { id },
-    data,
-    include: { customer: true },
+  const order = await prisma.$transaction(async (tx) => {
+    if (
+      (normalized === BakeryOrderStatus.REJECTED ||
+        normalized === BakeryOrderStatus.EXPIRED) &&
+      existing.status !== BakeryOrderStatus.REJECTED &&
+      existing.status !== BakeryOrderStatus.EXPIRED &&
+      existing.status !== BakeryOrderStatus.FULFILLED
+    ) {
+      await releaseInventoryForOrder(tx, [
+        {
+          itemType: existing.itemType,
+          itemName: existing.itemName,
+          quantity: existing.quantity,
+        },
+      ]);
+    }
+
+    return tx.bakeryOrder.update({
+      where: { id },
+      data,
+      include: { customer: true },
+    });
   });
 
   if (

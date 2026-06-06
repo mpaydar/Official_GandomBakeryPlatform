@@ -5,19 +5,29 @@ import { useCart } from "@/lib/CartContext";
 import type { StoreProduct } from "@/lib/store-products";
 
 export default function MenuProductCard({ product: p }: { product: StoreProduct }) {
-  const { addItem } = useCart();
+  const { addItem, cart } = useCart();
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
 
   const displayPrice = p.salePrice ?? p.price;
   const hasDiscount = p.salePrice !== undefined && p.salePrice < p.price;
   const isOnSale = hasDiscount || !!p.onSale;
+  const locked = !p.inStock;
+
+  const inCart = cart.find((i) => i.itemType === p.id)?.quantity ?? 0;
+  const maxQty =
+    p.trackInventory && p.stockQty != null
+      ? Math.max(0, p.stockQty - inCart)
+      : null;
 
   function handleAdd() {
+    if (locked) return;
+    const addQty = maxQty != null ? Math.min(qty, maxQty) : qty;
+    if (addQty < 1) return;
     addItem({
       itemType: p.id,
       name: p.nameEn,
-      quantity: qty,
+      quantity: addQty,
       unitPrice: displayPrice,
     });
     setAdded(true);
@@ -25,10 +35,23 @@ export default function MenuProductCard({ product: p }: { product: StoreProduct 
   }
 
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm transition hover:shadow-md">
+    <article
+      className={`flex h-full flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition hover:shadow-md ${
+        locked ? "border-stone-200 opacity-75" : "border-stone-200"
+      }`}
+    >
       <div className="relative flex aspect-square items-center justify-center bg-[#f7f4ef]">
-        <span className="text-5xl sm:text-6xl">{p.emoji}</span>
-        {isOnSale && (
+        <span className={`text-5xl sm:text-6xl ${locked ? "grayscale" : ""}`}>
+          {p.emoji}
+        </span>
+        {locked && (
+          <span className="absolute inset-0 flex items-center justify-center bg-stone-900/40">
+            <span className="rounded-md bg-stone-900 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white">
+              Out of stock
+            </span>
+          </span>
+        )}
+        {isOnSale && !locked && (
           <span className="absolute left-2.5 top-2.5 rounded-md bg-red-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
             Sale
           </span>
@@ -46,6 +69,11 @@ export default function MenuProductCard({ product: p }: { product: StoreProduct 
           {p.nameEn}
         </h3>
         <p className="mt-0.5 text-xs text-stone-400">{p.unit}</p>
+        {p.trackInventory && p.stockQty != null && !locked && p.stockQty <= 5 && (
+          <p className="mt-1 text-xs font-medium text-amber-700">
+            Only {p.stockQty} left
+          </p>
+        )}
 
         <div className="mt-2">
           {hasDiscount ? (
@@ -64,38 +92,50 @@ export default function MenuProductCard({ product: p }: { product: StoreProduct 
           )}
         </div>
 
-        <div className="mt-3 flex items-center rounded-lg border border-stone-200">
-          <button
-            type="button"
-            onClick={() => setQty((q) => Math.max(1, q - 1))}
-            className="flex h-9 w-9 shrink-0 items-center justify-center text-lg text-stone-600 transition hover:bg-stone-50"
-            aria-label="Decrease quantity"
-          >
-            −
-          </button>
-          <span className="flex-1 text-center text-sm font-semibold text-stone-800">
-            {qty}
-          </span>
-          <button
-            type="button"
-            onClick={() => setQty((q) => q + 1)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center text-lg text-stone-600 transition hover:bg-stone-50"
-            aria-label="Increase quantity"
-          >
-            +
-          </button>
-        </div>
+        {!locked && (
+          <div className="mt-3 flex items-center rounded-lg border border-stone-200">
+            <button
+              type="button"
+              onClick={() => setQty((q) => Math.max(1, q - 1))}
+              className="flex h-9 w-9 shrink-0 items-center justify-center text-lg text-stone-600 transition hover:bg-stone-50"
+              aria-label="Decrease quantity"
+            >
+              −
+            </button>
+            <span className="flex-1 text-center text-sm font-semibold text-stone-800">
+              {qty}
+            </span>
+            <button
+              type="button"
+              onClick={() =>
+                setQty((q) =>
+                  maxQty != null ? Math.min(maxQty + inCart, q + 1) : q + 1
+                )
+              }
+              disabled={maxQty != null && qty >= maxQty + inCart}
+              className="flex h-9 w-9 shrink-0 items-center justify-center text-lg text-stone-600 transition hover:bg-stone-50 disabled:opacity-40"
+              aria-label="Increase quantity"
+            >
+              +
+            </button>
+          </div>
+        )}
 
         <button
           type="button"
           onClick={handleAdd}
-          className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition active:scale-[0.98] ${
-            added
-              ? "bg-green-600 text-white"
-              : "bg-[var(--landing-accent)] text-white hover:bg-[var(--landing-accent-hover)]"
+          disabled={locked || (maxQty != null && maxQty < 1)}
+          className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${
+            locked
+              ? "bg-stone-300 text-stone-600"
+              : added
+                ? "bg-green-600 text-white"
+                : "bg-[var(--landing-accent)] text-white hover:bg-[var(--landing-accent-hover)]"
           }`}
         >
-          {added ? (
+          {locked ? (
+            "Unavailable"
+          ) : added ? (
             <>
               <svg
                 className="h-4 w-4"

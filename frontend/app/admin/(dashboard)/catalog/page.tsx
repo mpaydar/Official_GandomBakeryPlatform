@@ -13,7 +13,11 @@ export default async function AdminCatalogPage() {
         Catalog
       </h1>
       <p className="mt-1 text-sm text-zinc-500">
-        {products.length} products from the database
+        Read-only view of all products. Manage stock in{" "}
+        <a href="/admin/inventory" className="text-amber-600 hover:underline">
+          Inventory
+        </a>
+        .
       </p>
 
       <div className="mt-8 overflow-x-auto rounded-xl border border-zinc-800">

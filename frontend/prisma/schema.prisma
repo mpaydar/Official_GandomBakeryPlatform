@@ -109,6 +109,8 @@ model Product {
   isSeasonal    Boolean  @default(false)
   isOnSale      Boolean  @default(false)
   isActive      Boolean  @default(true)
+  stockQty      Int      @default(0)
+  trackInventory Boolean @default(true)
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
