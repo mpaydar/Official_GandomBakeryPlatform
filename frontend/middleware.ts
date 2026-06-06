@@ -7,7 +7,9 @@ export function middleware(req: NextRequest) {
 
   const isAdmin = pathname.startsWith("/admin");
   const isPublicAdmin =
-    pathname === "/admin/login" || pathname === "/admin/setup";
+    pathname === "/admin/login" ||
+    pathname === "/admin/setup" ||
+    pathname === "/admin/forgot-password";
 
   if (!isAdmin || isPublicAdmin) return NextResponse.next();
 

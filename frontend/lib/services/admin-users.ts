@@ -85,3 +85,38 @@ export async function loginAdmin(username: string, password: string) {
   const accessToken = await createAdminAccessToken(admin.username);
   return { ok: true as const, accessToken };
 }
+
+/** Reset password when the admin reset passcode is valid. */
+export async function resetAdminPassword(input: {
+  username: string;
+  password: string;
+  passcode: string;
+}) {
+  const passcodeCheck = verifyAdminRegistrationPasscode(input.passcode);
+  if (!passcodeCheck.ok) {
+    return { ok: false as const, error: passcodeCheck.error };
+  }
+
+  if (input.password.length < 8) {
+    return {
+      ok: false as const,
+      error: "Password must be at least 8 characters",
+    };
+  }
+
+  const username = input.username.trim().toLowerCase();
+  const admin = await prisma.adminUser.findFirst({
+    where: { username, isActive: true },
+  });
+  if (!admin) {
+    return { ok: false as const, error: "No active account found for that username" };
+  }
+
+  const passwordHash = await hashPassword(input.password);
+  await prisma.adminUser.update({
+    where: { id: admin.id },
+    data: { passwordHash },
+  });
+
+  return { ok: true as const };
+}

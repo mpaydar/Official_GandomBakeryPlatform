@@ -76,12 +76,20 @@ export default function AdminLoginForm({
               />
             </div>
             <div>
-              <label
-                htmlFor="password"
-                className="block text-xs font-medium uppercase tracking-wide text-zinc-400"
-              >
-                Password
-              </label>
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="password"
+                  className="block text-xs font-medium uppercase tracking-wide text-zinc-400"
+                >
+                  Password
+                </label>
+                <Link
+                  href="/admin/forgot-password"
+                  className="text-xs font-medium text-amber-400 hover:text-amber-300"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <input
                 id="password"
                 name="password"

@@ -28,6 +28,10 @@ body {
 .landing-theme {
   --landing-accent: #6f263d;
   --landing-accent-hover: #5a1f32;
+  --shop-bg: #faf8f5;
+  --shop-surface: #ffffff;
+  --shop-border: #e7e5e4;
+  --shop-muted: #78716c;
 }
 
 .landing-theme .font-serif {
