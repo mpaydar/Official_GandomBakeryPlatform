@@ -15,6 +15,9 @@ export default function LandingFooter() {
           <Link href="/contact" className="transition hover:text-amber-300">
             Contact
           </Link>
+          <Link href="/receipt" className="transition hover:text-amber-300">
+            Receipt lookup
+          </Link>
           <Link href="/admin/login" className="transition hover:text-amber-300">
             Admin
           </Link>

@@ -60,6 +60,12 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum ReceiptPaymentStatus {
+  PAY_AT_PICKUP
+  PAID
+  AUTHORIZED
+}
+
 enum OrderChannel {
   WALK_IN
   PHONE
@@ -307,6 +313,9 @@ model BakeryOrder {
   customerId String?
   customer   Customer?         @relation(fields: [customerId], references: [id])
 
+  checkoutReceiptId    String?
+  checkoutReceipt      CheckoutReceipt? @relation(fields: [checkoutReceiptId], references: [id])
+
   itemType             String
   itemName             String?
   quantity             Int
@@ -332,6 +341,30 @@ model BakeryOrder {
   @@index([createdAt])
   @@index([expiresAt])
   @@index([confirmationNumber])
+  @@index([checkoutReceiptId])
+}
+
+model CheckoutReceipt {
+  id                 String               @id @default(uuid())
+  confirmationNumber String               @unique
+  customerFirstName  String
+  customerLastName   String
+  customerPhone      String
+  paymentMethod      PaymentMethod
+  paymentStatus      ReceiptPaymentStatus
+  subtotal           Decimal              @db.Decimal(10, 2)
+  tax                Decimal              @db.Decimal(10, 2) @default(0)
+  total              Decimal              @db.Decimal(10, 2)
+  currency           String               @default("usd")
+  lineItems          Json
+  paidAt             DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  bakeryOrders BakeryOrder[]
+
+  @@index([createdAt])
+  @@index([customerPhone])
 }
 
 model BakeryOrderNotification {

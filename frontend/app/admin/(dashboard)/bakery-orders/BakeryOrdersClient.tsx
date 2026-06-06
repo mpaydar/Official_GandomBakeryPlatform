@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAdminOrderNotifications } from "@/components/admin/AdminOrderNotifications";
 import {
@@ -244,7 +245,16 @@ export default function BakeryOrdersClient() {
                     {paymentDisplayLabel(o.paymentMethod)}
                   </td>
                   <td className="px-3 py-3 font-mono text-xs text-amber-200/90">
-                    {o.confirmationNumber ?? "—"}
+                    {o.confirmationNumber ? (
+                      <Link
+                        href={`/admin/receipts/${encodeURIComponent(o.confirmationNumber)}`}
+                        className="underline-offset-2 hover:underline"
+                      >
+                        {o.confirmationNumber}
+                      </Link>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="px-3 py-3">
                     <span className="rounded bg-zinc-800 px-2 py-0.5 text-xs font-medium text-amber-200/90">

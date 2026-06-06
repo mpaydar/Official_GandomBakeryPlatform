@@ -32,7 +32,7 @@ const PAYMENT_OPTIONS: { value: PaymentMethod; label: string; hint: string }[] =
   {
     value: "card",
     label: "Pay with card",
-    hint: "Pay now with your debit or credit card.",
+    hint: "Pay now — your receipt is saved with your confirmation number.",
   },
 ];
 
@@ -123,16 +123,21 @@ export default function CheckoutPage() {
   /* ── Success ── */
   if (status === "success") {
     const paidAtStore = paymentMethod === "pay_at_store";
+    const receiptHref = confirmationNumber
+      ? `/receipt?code=${encodeURIComponent(confirmationNumber)}`
+      : "/receipt";
     return (
       <Shell>
         <div className="flex flex-1 items-center justify-center px-4 py-20">
           <div className="w-full max-w-md rounded-2xl border border-amber-500/20 bg-slate-800/80 p-8 text-center shadow-2xl">
             <span className="text-6xl">{paidAtStore ? "🧾" : "✅"}</span>
             <h2 className="mt-4 text-2xl font-bold text-amber-100">Order placed</h2>
-            {paidAtStore && confirmationNumber ? (
+            {confirmationNumber ? (
               <>
                 <p className="mt-2 text-sm text-amber-200/70">
-                  Pay when you pick up. Show this confirmation number at the store.
+                  {paidAtStore
+                    ? "Pay when you pick up. Show this confirmation number at the store."
+                    : "Your payment was recorded. Save your confirmation number and receipt."}
                 </p>
                 <p className="mt-5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 font-mono text-2xl font-bold tracking-widest text-amber-100">
                   {confirmationNumber}
@@ -140,7 +145,7 @@ export default function CheckoutPage() {
               </>
             ) : (
               <p className="mt-2 text-sm text-amber-200/60">
-                Your card payment was received. We will have your order ready for pickup.
+                Your order was received. We will have it ready for pickup.
               </p>
             )}
             {orderIds.length > 0 && (
@@ -150,8 +155,14 @@ export default function CheckoutPage() {
               </p>
             )}
             <Link
+              href={receiptHref}
+              className="mt-6 block w-full rounded-xl border border-amber-500/40 py-3 text-center text-sm font-bold text-amber-200 transition hover:bg-amber-500/10"
+            >
+              View &amp; print receipt
+            </Link>
+            <Link
               href="/"
-              className="mt-8 block w-full rounded-xl bg-amber-500 py-3 text-center text-sm font-bold text-slate-900 transition hover:bg-amber-400"
+              className="mt-3 block w-full rounded-xl bg-amber-500 py-3 text-center text-sm font-bold text-slate-900 transition hover:bg-amber-400"
             >
               Back to home
             </Link>
