@@ -12,6 +12,7 @@ const nav = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/bakery-orders", label: "Bakery orders" },
   { href: "/admin/catalog", label: "Catalog" },
+  { href: "/admin/shifts", label: "Shifts" },
 ];
 
 export default function AdminDashboardShell({
