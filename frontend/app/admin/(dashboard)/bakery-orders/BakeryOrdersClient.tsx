@@ -247,7 +247,7 @@ export default function BakeryOrdersClient() {
                   <td className="px-3 py-3 font-mono text-xs text-amber-200/90">
                     {o.confirmationNumber ? (
                       <Link
-                        href={`/admin/receipts/${encodeURIComponent(o.confirmationNumber)}`}
+                        href={`/admin/receipts?code=${encodeURIComponent(o.confirmationNumber)}`}
                         className="underline-offset-2 hover:underline"
                       >
                         {o.confirmationNumber}

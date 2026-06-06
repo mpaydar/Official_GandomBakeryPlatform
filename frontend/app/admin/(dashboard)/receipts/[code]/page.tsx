@@ -29,10 +29,10 @@ export default async function AdminReceiptPage({ params }: PageProps) {
         <h1 className="text-xl font-semibold text-zinc-900">Receipt not found</h1>
         <p className="mt-2 text-sm text-zinc-600">{result.error}</p>
         <Link
-          href="/admin/bakery-orders"
+          href="/admin/receipts"
           className="mt-6 inline-block text-sm font-medium text-amber-600 hover:underline"
         >
-          ← Back to orders
+          ← Back to receipt lookup
         </Link>
       </div>
     );
