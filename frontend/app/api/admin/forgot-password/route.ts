@@ -43,7 +43,8 @@ export async function POST(req: NextRequest) {
       result.error === "Invalid registration passcode" ||
       result.error === "Registration passcode is required"
         ? 403
-        : result.error === "No active account found for that username"
+        : result.error.startsWith("No active account found") ||
+            result.error.startsWith("No admin accounts exist")
           ? 404
           : 400;
     return NextResponse.json({ error: result.error }, { status });

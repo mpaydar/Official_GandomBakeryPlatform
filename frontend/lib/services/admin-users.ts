@@ -3,6 +3,58 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { createAdminAccessToken } from "@/lib/jwt";
 
+function compactLoginId(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9._-]/g, "");
+}
+
+function legacyUsernameFromName(firstName: string, lastName: string): string {
+  return `${firstName}${lastName}`.toLowerCase().replace(/[^a-z0-9._-]/g, "");
+}
+
+/** Resolve admin by username, case-insensitive match, or first+last legacy login. */
+async function findActiveAdminByLoginIdentifier(identifier: string) {
+  const normalized = identifier.trim().toLowerCase();
+  const compact = compactLoginId(identifier);
+
+  const exact = await prisma.adminUser.findFirst({
+    where: { username: normalized, isActive: true },
+  });
+  if (exact) return exact;
+
+  const insensitive = await prisma.adminUser.findFirst({
+    where: {
+      username: { equals: normalized, mode: "insensitive" },
+      isActive: true,
+    },
+  });
+  if (insensitive) return insensitive;
+
+  const activeAdmins = await prisma.adminUser.findMany({
+    where: { isActive: true },
+  });
+
+  return (
+    activeAdmins.find((admin) => {
+      const legacy = legacyUsernameFromName(admin.firstName, admin.lastName);
+      return (
+        admin.username.toLowerCase() === compact ||
+        legacy === compact ||
+        legacy === normalized
+      );
+    }) ?? null
+  );
+}
+
+async function adminLookupError(identifier: string) {
+  const activeCount = await prisma.adminUser.count({ where: { isActive: true } });
+  if (activeCount === 0) {
+    return "No admin accounts exist on this server yet. Create one at /admin/setup first.";
+  }
+
+  const hint = compactLoginId(identifier);
+  return `No active account found for "${hint}". Check spelling, or try first+last with no space (e.g. johnsmith).`;
+}
+
 export async function hasMasterAdmin(): Promise<boolean> {
   const count = await prisma.adminUser.count();
   return count > 0;
@@ -69,10 +121,7 @@ export async function registerMasterAdmin(
 }
 
 export async function loginAdmin(username: string, password: string) {
-  const normalized = username.trim().toLowerCase();
-  const admin = await prisma.adminUser.findFirst({
-    where: { username: normalized, isActive: true },
-  });
+  const admin = await findActiveAdminByLoginIdentifier(username);
   if (!admin) {
     return { ok: false as const, error: "Invalid credentials" };
   }
@@ -104,18 +153,24 @@ export async function resetAdminPassword(input: {
     };
   }
 
-  const username = input.username.trim().toLowerCase();
-  const admin = await prisma.adminUser.findFirst({
-    where: { username, isActive: true },
-  });
+  const admin = await findActiveAdminByLoginIdentifier(input.username);
   if (!admin) {
-    return { ok: false as const, error: "No active account found for that username" };
+    return {
+      ok: false as const,
+      error: await adminLookupError(input.username),
+    };
   }
 
   const passwordHash = await hashPassword(input.password);
+  const normalizedUsername = admin.username.trim().toLowerCase();
   await prisma.adminUser.update({
     where: { id: admin.id },
-    data: { passwordHash },
+    data: {
+      passwordHash,
+      ...(admin.username !== normalizedUsername
+        ? { username: normalizedUsername }
+        : {}),
+    },
   });
 
   return { ok: true as const };

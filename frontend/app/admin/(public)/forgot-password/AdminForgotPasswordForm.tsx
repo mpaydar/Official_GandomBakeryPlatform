@@ -87,8 +87,13 @@ export default function AdminForgotPasswordForm({ resetEnabled }: Props) {
                   type="text"
                   autoComplete="username"
                   required
+                  placeholder="e.g. mohammadbayat"
                   className={inputClass}
                 />
+                <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
+                  Usernames are stored lowercase. If unsure, try first+last with no
+                  space.
+                </p>
               </div>
               <div>
                 <label
