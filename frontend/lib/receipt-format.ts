@@ -1,4 +1,4 @@
-import type { PaymentMethod, ReceiptPaymentStatus } from "../../generated/prisma/client";
+import type { PaymentMethod, ReceiptPaymentStatus } from "../generated/prisma/client";
 
 export type ReceiptLineItem = {
   itemType: string;
